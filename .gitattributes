@@ -1,0 +1,6 @@
+# Windows에서도 실행 파일의 LF 줄바꿈을 유지한다.
+*.sh text eol=lf
+Dockerfile* text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.txt text eol=lf

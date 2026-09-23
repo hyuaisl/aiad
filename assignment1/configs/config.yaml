@@ -1,0 +1,19 @@
+# 공개 baseline과 참가자 실행에 사용하는 공통 기본 설정입니다.
+language: kor  # kor: 한국어 / eng: English / chn: 简体中文 (GUI + terminal)
+
+collect:
+  data_dir: data/collected
+
+train:
+  # auto: assignment1/models/ 바로 아래의 모든 .pth 중 수정 시각이 가장 최근인 파일을 선택합니다.
+  # 가중치 호환 및 실제 출력/기울기 비교를 통과하면 이어 학습하고, 실패하거나 모델이 없으면 처음부터 학습합니다.
+  # 직접 지정: start_model: models/파일명.pth
+  start_model: auto
+  data_dir: data/collected  # 제공 데이터: data/expert, 모두 사용: data
+  model_path: auto  # models/년월일_시분초.pth로 자동 저장
+  epochs: 100
+  batch_size: 4096
+  learning_rate: 0.001
+
+evaluate:
+  model_path: latest  # 최신 학습 모델(없으면 baseline). 특정 모델은 models/파일명.pth 지정
