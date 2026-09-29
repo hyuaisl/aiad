@@ -7,6 +7,37 @@ torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32 = False
 
 
+class MPSCompatibleAdaptiveAvgPool2d(torch.nn.AdaptiveAvgPool2d):
+    """MPS에서도 원래 adaptive pooling의 영역과 평균을 유지한다."""
+
+    def forward(self, x):
+        if x.device.type != 'mps':
+            return super().forward(x)
+        height, width = x.shape[-2:]
+        size = self.output_size
+        out_h, out_w = (size, size) if isinstance(size, int) else size
+        out_h = height if out_h is None else out_h
+        out_w = width if out_w is None else out_w
+        if out_h <= 0 or out_w <= 0 or height == 0 or width == 0:
+            return super().forward(x)
+        if height % out_h == 0 and width % out_w == 0:
+            return super().forward(x)
+
+        # 시작=floor(i*N/M), 끝=ceil((i+1)*N/M). 경계의 중첩도 원본과 같다.
+        # CPU 이동이나 detach 없이 평균을 계산하므로 MPS 역전파가 유지된다.
+        rows = []
+        for i in range(out_h):
+            start_h = i * height // out_h
+            end_h = ((i + 1) * height + out_h - 1) // out_h
+            cells = []
+            for j in range(out_w):
+                start_w = j * width // out_w
+                end_w = ((j + 1) * width + out_w - 1) // out_w
+                cells.append(x[..., start_h:end_h, start_w:end_w].mean(dim=(-2, -1)))
+            rows.append(torch.stack(cells, dim=-1))
+        return torch.stack(rows, dim=-2)
+
+
 class ClassificationNetwork(torch.nn.Module):
     def __init__(self, device=None):
         """
@@ -69,7 +100,7 @@ class ClassificationNetwork(torch.nn.Module):
             # 각 채널의 공간 특징을 평균으로 요약하여 4×4로 만듭니다.
             # 입력 공간 크기가 달라도 출력은 (B, 8, 4, 4)로 맞춥니다.
             # 채널 수는 바꾸지 않으며, 너무 작게 요약하면 세부 정보를 잃을 수 있습니다.
-            torch.nn.AdaptiveAvgPool2d((4, 4)),
+            MPSCompatibleAdaptiveAvgPool2d((4, 4)),
         )
         #
         # [2. 행동 분류: self.fc]

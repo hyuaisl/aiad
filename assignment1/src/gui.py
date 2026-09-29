@@ -120,7 +120,10 @@ class GuidedCarRacing(CarRacing):
                 super()._render('rgb_array')
             finally:
                 self._gui_rendering = False
-            self._gui_road_surface = self.surf
+            # macOS에서는 Surface의 알파 마스크가 subsurface()에 전달되며
+            # 도로 픽셀의 알파값 0이 투명하게 합성될 수 있다.
+            # GUI 전용 복사본은 알파 없는 RGB로 고정하고 관측용 Surface는 유지한다.
+            self._gui_road_surface = self.surf.convert(24)
             self._road_frame_key = frame_key
         if self.screen is None:
             pygame.display.init()
