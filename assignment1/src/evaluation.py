@@ -77,9 +77,9 @@ def evaluate(settings, score=False, driving=None, language='kor'):
     device, reason = select_device()
     print_runtime('추론', device, reason, dict(model_path=settings['model_path'],
                   display=settings['display'], score=score, **driving_settings(driving)))
-    # 현재 구조와 해시가 일치하는 가중치 체크포인트만 로드한다.
+    # 소스가 달라도 저장 소스 검증 및 출력·역전파 동등성 검사를 통과하면 허용한다.
     from model_io import load_model
-    model, _ = load_model(settings['model_path'], device)
+    model, _ = load_model(settings['model_path'], device, allow_equivalent_source=True)
     model.eval()
     model.device = device
     warm_up_model(model, device)
